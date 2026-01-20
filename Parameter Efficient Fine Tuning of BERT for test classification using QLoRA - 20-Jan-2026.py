@@ -69,6 +69,7 @@ def compute_params(model):
     trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
     return total, trainable
 
+
 def main():
     args = parse_args()
     torch.manual_seed(args.seed)
@@ -76,20 +77,46 @@ def main():
     print("Loading dataset:", args.dataset_name)
     ds = load_dataset(args.dataset_name)
 
-    # check typical columns
     print(ds)
 
-    # For the suggested dataset, label column may be "label" and text column "text"
-    text_col = "text"
-    label_col = "label"
+    # ---------------------------------------------------------
+    # ✅ Robust column detection
+    # ---------------------------------------------------------
+    candidate_text_cols = ["text", "review", "sentence", "content"]
+    candidate_label_cols = ["label", "labels", "sentiment", "target"]
 
+    train_columns = ds["train"].column_names
+
+    text_col = next((c for c in candidate_text_cols if c in train_columns), None)
+    label_col = next((c for c in candidate_label_cols if c in train_columns), None)
+
+    if text_col is None or label_col is None:
+        raise ValueError(
+            f"Could not infer text/label columns. Found columns: {train_columns}"
+        )
+
+    print(f"Using text column: '{text_col}', label column: '{label_col}'")
+
+    # ---------------------------------------------------------
+    # Tokenizer
+    # ---------------------------------------------------------
     print("Loading tokenizer:", args.model_name)
     tokenizer = AutoTokenizer.from_pretrained(args.model_name, use_fast=True)
 
     def preprocess_fn(examples):
-        return tokenizer(examples[text_col], truncation=True, padding=False, max_length=256)
+        return tokenizer(
+            examples[text_col],
+            truncation=True,
+            padding=False,
+            max_length=256,
+        )
 
-    tokenized = ds.map(preprocess_fn, batched=True, remove_columns=[c for c in ds["train"].column_names if c not in (text_col, label_col)])
+    tokenized = ds.map(
+        preprocess_fn,
+        batched=True,
+        remove_columns=[c for c in train_columns if c not in (text_col, label_col)],
+    )
+
     tokenized = tokenized.rename_column(label_col, "labels")
     tokenized.set_format(type="torch")
 
@@ -98,23 +125,15 @@ def main():
 
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
-    # 4-bit quantization config using BitsAndBytesConfig
-    print("Configuring 4-bit quantization (bitsandbytes)...")
-    quant_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_compute_dtype=torch.float16,
-        bnb_4bit_use_double_quant=True,
-        bnb_4bit_quant_type="nf4",
+    # ---------------------------------------------------------
+    # ⚠️ QLoRA warning for BERT (important)
+    # ---------------------------------------------------------
+    print(
+        "⚠️ NOTE: QLoRA is experimental for encoder-only models like BERT.\n"
+        "If you encounter instability, consider fp16 LoRA instead."
     )
 
-    # Load model with 4-bit quantization; device_map auto to place modules on GPU/CPU
-    print("Loading model in 4-bit:", args.model_name)
-    model = AutoModelForSequenceClassification.from_pretrained(
-        args.model_name,
-        quantization_config=quant_config,
-        device_map="auto",
-        num_labels=2,
-    )
+    
 
     # Prepare for k-bit training (freezes/bias conversion as required)
     model = prepare_model_for_kbit_training(model)
