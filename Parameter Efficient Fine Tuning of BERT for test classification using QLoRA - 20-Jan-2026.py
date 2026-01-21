@@ -39,7 +39,7 @@ from peft import (
     LoraConfig,
     TaskType,
     get_peft_model,
-    prepare_model_for_kbit_training,
+    #prepare_model_for_kbit_training,
 )
 
 # Optional: bitsandbytes optimizer
