@@ -125,35 +125,35 @@ def main():
 
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
-# ---------------------------------------------------------
-# ⚠️ QLoRA warning for BERT (important)
-# ---------------------------------------------------------
-print(
-    "⚠️ NOTE: QLoRA is experimental for encoder-only models like BERT.\n"
-    "If you encounter instability, consider fp16 LoRA instead."
-)
-
-# -------------------------------
-# Load BERT model in 4-bit + prepare for k-bit training
-# -------------------------------
-from transformers import BitsAndBytesConfig
-
-bnb_config = BitsAndBytesConfig(
-    load_in_4bit=True,
-    bnb_4bit_compute_dtype=torch.float16,
-    bnb_4bit_quant_type="nf4",
-    bnb_4bit_use_double_quant=True,
-)
-
-model = AutoModelForSequenceClassification.from_pretrained(
-    args.model_name,
-    num_labels=2,
-    quantization_config=bnb_config,
-    device_map="auto"
-)
-
-# Prepare model for k-bit training (freezes/bias adjustments)
-model = prepare_model_for_kbit_training(model)
+    # ---------------------------------------------------------
+    # ⚠️ QLoRA warning for BERT (important)
+    # ---------------------------------------------------------
+    print(
+        "⚠️ NOTE: QLoRA is experimental for encoder-only models like BERT.\n"
+        "If you encounter instability, consider fp16 LoRA instead."
+    )
+    
+    # -------------------------------
+    # Load BERT model in 4-bit + prepare for k-bit training
+    # -------------------------------
+    from transformers import BitsAndBytesConfig
+    
+    bnb_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_compute_dtype=torch.float16,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_use_double_quant=True,
+    )
+    
+    model = AutoModelForSequenceClassification.from_pretrained(
+        args.model_name,
+        num_labels=2,
+        quantization_config=bnb_config,
+        device_map="auto"
+    )
+    
+    # Prepare model for k-bit training (freezes/bias adjustments)
+    model = prepare_model_for_kbit_training(model)
 
 
     # Setup LoRA (PEFT) config
