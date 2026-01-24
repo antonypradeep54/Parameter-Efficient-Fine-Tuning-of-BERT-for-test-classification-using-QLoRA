@@ -74,6 +74,8 @@ def main():
     args = parse_args()
     torch.manual_seed(args.seed)
     model_name = "bert-base-uncased"
+    num_labels = 2  
+
 
 
     print("Loading dataset:", args.dataset_name)
