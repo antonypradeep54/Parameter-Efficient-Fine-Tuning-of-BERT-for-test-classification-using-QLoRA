@@ -146,11 +146,10 @@ def main():
     )
     
     model = AutoModelForSequenceClassification.from_pretrained(
-        args.model_name,
-        num_labels=2,
-        quantization_config=bnb_config,
-        device_map="auto"
+      model_name,
+      num_labels=num_labels,
     )
+
     
     # Prepare model for k-bit training (freezes/bias adjustments)
     model = prepare_model_for_kbit_training(model)
