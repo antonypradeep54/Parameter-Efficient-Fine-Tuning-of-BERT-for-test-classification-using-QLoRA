@@ -73,6 +73,8 @@ def compute_params(model):
 def main():
     args = parse_args()
     torch.manual_seed(args.seed)
+    model_name = "bert-base-uncased"
+
 
     print("Loading dataset:", args.dataset_name)
     ds = load_dataset(args.dataset_name)
