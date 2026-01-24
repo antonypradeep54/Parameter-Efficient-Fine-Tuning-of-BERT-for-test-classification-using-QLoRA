@@ -150,9 +150,7 @@ def main():
       num_labels=num_labels,
     )
 
-    
-    # Prepare model for k-bit training (freezes/bias adjustments)
-    model = prepare_model_for_kbit_training(model)
+    model.to("cuda")
 
 
     # Setup LoRA (PEFT) config
