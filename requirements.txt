@@ -1,7 +1,7 @@
-transformers>=4.35.0
-accelerate>=0.20.3
+transformers>=4.41.2
+accelerate>=0.28.0
 datasets>=2.12.0
-peft>=0.4.0
+peft>=0.10.0
 bitsandbytes>=0.38.1
 torch>=2.0.0
 wandb
@@ -9,3 +9,4 @@ huggingface-hub
 evaluate
 sentencepiece
 tqdm
+scikit-learn
