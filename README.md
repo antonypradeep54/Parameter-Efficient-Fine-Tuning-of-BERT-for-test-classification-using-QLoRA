@@ -21,7 +21,6 @@ python -m pip install -r requirements.txt
 
 ```bash
 python train.py \
-  --model_name bert-base-uncased \
   --dataset_name dipanjanS/imdb_sentiment_finetune_dataset20k \
   --output_dir ./qlora_bert_checkpoint \
   --per_device_train_batch_size 16 \
