@@ -1,35 +1,39 @@
-# QLoRA + BERT binary classification (terminal training)
+# BERT Binary Classification with PEFT/LoRA
 
-Files:
-- train.py : training script (uses bitsandbytes 4-bit + PEFT/LoRA)
-- requirements.txt : Python dependencies
+This repository contains a terminal-based experiment for fine-tuning BERT for binary sentiment classification using the Hugging Face Transformers and PEFT libraries.
 
-Basic steps:
+## Files
 
-1. Create and activate venv:
-   python3 -m venv ~/venv_qLoRA
-   source ~/venv_qLoRA/bin/activate
+- `train.py` — training script
+- `requirements.txt` — Python dependencies
 
-2. Install requirements:
-   pip install -r requirements.txt
+## Setup
 
-3. (Optional) Login to Hugging Face and Wandb:
-   huggingface-cli login
-   wandb login
+Create and activate a virtual environment:
 
-4. Run training:
-   python train.py \
-     --model_name bert-base-uncased \
-     --dataset_name dipanjanS/imdb_sentiment_finetune_dataset20k \
-     --output_dir ./qlora_bert_checkpoint \
-     --per_device_train_batch_size 16 \
-     --per_device_eval_batch_size 32 \
-     --num_train_epochs 3 \
-     --report_to wandb
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+```
 
-Adjust batch sizes for your GPU. For <24GB VRAM use per_device_train_batch_size=4 and increase gradient_accumulation_steps.
+## Run training
 
-Notes:
-- The script automatically loads model in 4-bit and adds LoRA adapters.
-- After training, the small adapter is saved to `output_dir`.
-- For memory comparison, try loading the plain float32 model (remove quantization / PEFT) and compare `nvidia-smi` while loading.
+```bash
+python train.py \
+  --model_name bert-base-uncased \
+  --dataset_name dipanjanS/imdb_sentiment_finetune_dataset20k \
+  --output_dir ./qlora_bert_checkpoint \
+  --per_device_train_batch_size 16 \
+  --per_device_eval_batch_size 32 \
+  --num_train_epochs 3 \
+  --report_to none
+```
+
+Adjust batch sizes to suit the available hardware. The script currently moves the model to CUDA, so a compatible CUDA GPU is required for the present implementation.
+
+## Important implementation note
+
+Although this experiment was originally labelled QLoRA-style and includes a 4-bit quantization configuration, the current model-loading path does not pass that configuration to `from_pretrained`. Therefore, the script should **not be treated as verified 4-bit QLoRA training in its current state**. It applies PEFT/LoRA adapters, but the 4-bit quantization path needs to be implemented and tested separately before making QLoRA-specific claims.
+
+The script reports evaluation metrics when training completes. No accuracy or memory-efficiency result is claimed here; results depend on the environment, dataset, and run configuration.
