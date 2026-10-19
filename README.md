@@ -1,26 +1,48 @@
-# BERT Binary Classification with PEFT/LoRA
+# BERT Sentiment Classification with 4-bit Quantization and LoRA
 
-This repository contains a terminal-based experiment for fine-tuning BERT for binary sentiment classification using the Hugging Face Transformers and PEFT libraries.
+This repository explores parameter-efficient fine-tuning for binary sentiment classification using Hugging Face Transformers and PEFT. The training script is designed to load a BERT sequence-classification model with bitsandbytes 4-bit quantization and train LoRA adapters.
+
+> **Experiment status:** the code now includes the intended 4-bit quantization path and k-bit preparation. A successful training run has not been verified as part of this repository update, so no accuracy, memory reduction, or speed improvement is claimed.
 
 ## Files
 
 - `train.py` — training script
 - `requirements.txt` — Python dependencies
 
-## Setup
+## Approach
 
-Create and activate a virtual environment:
+1. Load a dataset with a `train` split and a `test` or `validation` split.
+2. Infer the text and label columns from common names.
+3. Tokenize text using the selected Hugging Face tokenizer.
+4. Load the sequence-classification model with bitsandbytes 4-bit NF4 quantization and double quantization.
+5. Prepare the quantized model for k-bit training.
+6. Add LoRA adapters to the BERT attention query and value projections. The classifier head is included in `modules_to_save` for task-specific training.
+7. Train and evaluate with the Hugging Face `Trainer`, then save the adapter and tokenizer.
+
+QLoRA combines a quantized base model with trainable low-rank adapters. LoRA without quantization is a related but different setup; a configuration object alone does not make a run QLoRA.
+
+## Requirements
+
+- Python 3.10 or 3.11 recommended
+- CUDA-capable NVIDIA GPU and a compatible CUDA/PyTorch/bitsandbytes installation
+- Internet access for downloading the model and dataset on first use
+
+Create a virtual environment and install dependencies:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
+python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
+
+**Important:** install the PyTorch build appropriate for your CUDA environment if the default package resolution does not provide a compatible build. See the official [PyTorch installation selector](https://pytorch.org/get-started/locally/) and [bitsandbytes documentation](https://huggingface.co/docs/bitsandbytes/en/installation).
 
 ## Run training
 
 ```bash
 python train.py \
+  --model_name bert-base-uncased \
   --dataset_name dipanjanS/imdb_sentiment_finetune_dataset20k \
   --output_dir ./qlora_bert_checkpoint \
   --per_device_train_batch_size 16 \
@@ -29,10 +51,25 @@ python train.py \
   --report_to none
 ```
 
-Adjust batch sizes to suit the available hardware. The script currently moves the model to CUDA, so a compatible CUDA GPU is required for the present implementation.
+Adjust batch sizes to fit the available GPU memory. The script stops with a clear error if CUDA is unavailable. It chooses BF16 compute when the GPU reports support for it; otherwise it uses FP16.
 
-## Important implementation note
+To enable Weights & Biases logging, install the optional `wandb` dependency, authenticate with Weights & Biases, and pass `--report_to wandb`.
 
-Although this experiment was originally labelled QLoRA-style and includes a 4-bit quantization configuration, the current model-loading path does not pass that configuration to `from_pretrained`. Therefore, the script should **not be treated as verified 4-bit QLoRA training in its current state**. It applies PEFT/LoRA adapters, but the 4-bit quantization path needs to be implemented and tested separately before making QLoRA-specific claims.
+## Evaluation and outputs
 
-The script reports evaluation metrics when training completes. No accuracy or memory-efficiency result is claimed here; results depend on the environment, dataset, and run configuration.
+The script reports parameter counts, evaluation accuracy, and the evaluation metrics returned by the Trainer. It saves the PEFT adapter and tokenizer under the selected output directory.
+
+Record actual run details before publishing results, including the GPU model, CUDA/PyTorch versions, model and dataset revision, batch size, training duration, evaluation metrics, and any observed memory usage. Do not treat a configured run as evidence of measured performance.
+
+## Limitations
+
+- This is an experimental QLoRA-style setup using encoder-only BERT, not a general-purpose large language model.
+- The script assumes a binary classification task with two labels.
+- Dataset columns must use a recognized text name (`text`, `review`, `sentence`, or `content`) and label name (`label`, `labels`, `sentiment`, or `target`).
+- Quantization and training compatibility depend on the installed hardware and library versions.
+- Results may vary by dataset, random seed, model, and training configuration.
+
+## References
+
+- [PEFT quantization guide](https://huggingface.co/docs/peft/developer_guides/quantization)
+- [bitsandbytes documentation](https://huggingface.co/docs/bitsandbytes/en/integrations)
