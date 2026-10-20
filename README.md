@@ -2,7 +2,7 @@
 
 This repository explores parameter-efficient fine-tuning for binary sentiment classification using Hugging Face Transformers and PEFT. The training script is designed to load a BERT sequence-classification model with bitsandbytes 4-bit quantization and train LoRA adapters.
 
-> **Experiment status:** the code now includes the intended 4-bit quantization path and k-bit preparation. A successful training run has not been verified as part of this repository update, so no accuracy, memory reduction, or speed improvement is claimed.
+> **Experiment status:** a GPU smoke test of the training pipeline completed successfully in Google Colab. This verifies that the script can load the dataset and quantized model, train briefly, evaluate, and save the adapter. It is not a full training run and does not establish model quality, memory savings, or speed improvements.
 
 ## Files
 
@@ -54,6 +54,19 @@ python train.py \
 Adjust batch sizes to fit the available GPU memory. The script stops with a clear error if CUDA is unavailable. It chooses BF16 compute when the GPU reports support for it; otherwise it uses FP16.
 
 To enable Weights & Biases logging, install the optional `wandb` dependency, authenticate with Weights & Biases, and pass `--report_to wandb`.
+
+## GPU smoke test
+
+A short end-to-end smoke test was run in Google Colab on an NVIDIA Tesla T4 using PyTorch 2.11.0+cu130, Transformers 4.57.6, Accelerate 1.15.0, Datasets 4.8.5, PEFT 0.21.2, and bitsandbytes 0.50.2.
+
+- Dataset: `dipanjanS/imdb_sentiment_finetune_dataset20k`
+- Smoke-test subset: 8 training examples and 4 validation examples
+- Training: 2 steps completed
+- Validation loss: approximately 0.5757
+- Validation accuracy: 0.75 on just 4 examples
+- Output: PEFT adapter and tokenizer saved successfully
+
+The four-example validation result is too small to estimate generalization performance. Treat this as pipeline verification only; run a full training and a separate final test-set evaluation before reporting model-quality results. The smoke test used temporary local test settings and did not change the repository's default training duration.
 
 ## Evaluation and outputs
 
