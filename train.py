@@ -233,9 +233,26 @@ def main():
     print("Starting training...")
     trainer.train()
 
-    print("Evaluating...")
+    print("Evaluating on the selected evaluation split...")
     evaluation_results = trainer.evaluate()
     print("Evaluation results:", evaluation_results)
+
+    # Evaluate the selected model on the held-out test split only after training
+    # and model selection are complete. Never use test metrics to select a model.
+    if "test" in tokenized and eval_split != "test":
+        print("Evaluating final model on the held-out test split...")
+        test_results = trainer.evaluate(
+            eval_dataset=tokenized["test"],
+            metric_key_prefix="test",
+        )
+        print("Final test results:", test_results)
+    elif eval_split == "test":
+        print(
+            "No separate validation split was available; the test split was used "
+            "for training-time evaluation, so it is not an independent final test."
+        )
+    else:
+        print("No separate test split is available; skipping final test evaluation.")
 
     output_path = Path(args.output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
