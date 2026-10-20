@@ -17,7 +17,8 @@ This repository explores parameter-efficient fine-tuning for binary sentiment cl
 4. Load the sequence-classification model with bitsandbytes 4-bit NF4 quantization and double quantization.
 5. Prepare the quantized model for k-bit training.
 6. Add LoRA adapters to the BERT attention query and value projections. The classifier head is included in `modules_to_save` for task-specific training.
-7. Train and evaluate with the Hugging Face `Trainer`, then save the adapter and tokenizer.
+7. Use the validation split for training-time evaluation and best-checkpoint selection when available.
+8. After training, evaluate the selected model once on the separate held-out test split, if one exists, then save the adapter and tokenizer.
 
 QLoRA combines a quantized base model with trainable low-rank adapters. LoRA without quantization is a related but different setup; a configuration object alone does not make a run QLoRA.
 
@@ -70,7 +71,7 @@ The four-example validation result is too small to estimate generalization perfo
 
 ## Evaluation and outputs
 
-The script reports parameter counts, evaluation accuracy, and the evaluation metrics returned by the Trainer. It saves the PEFT adapter and tokenizer under the selected output directory.
+The script reports parameter counts and validation/evaluation metrics returned by the Trainer. When both `validation` and `test` splits exist, it uses `validation` for training-time evaluation and best-checkpoint selection, then reports a separate `Final test results` metric set on `test`. Test metrics are for final reporting, not model selection. If no validation split exists and `test` is used during training-time evaluation, the script warns that this is not an independent final test. The script saves the PEFT adapter and tokenizer under the selected output directory.
 
 Record actual run details before publishing results, including the GPU model, CUDA/PyTorch versions, model and dataset revision, batch size, training duration, evaluation metrics, and any observed memory usage. Do not treat a configured run as evidence of measured performance.
 
