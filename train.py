@@ -99,8 +99,9 @@ def main():
             f"Dataset must contain a 'train' split. Available splits: {list(dataset.keys())}"
         )
 
-    eval_split = "test" if "test" in dataset else (
-        "validation" if "validation" in dataset else None
+    # Use validation for model selection; keep the test split for final reporting.
+    eval_split = "validation" if "validation" in dataset else (
+        "test" if "test" in dataset else None
     )
     if eval_split is None:
         raise ValueError(
@@ -190,7 +191,7 @@ def main():
         per_device_train_batch_size=args.per_device_train_batch_size,
         per_device_eval_batch_size=args.per_device_eval_batch_size,
         gradient_accumulation_steps=1,
-        evaluation_strategy="steps",
+        eval_strategy="steps",
         eval_steps=args.eval_steps,
         save_strategy="steps",
         save_steps=args.save_steps,
@@ -224,7 +225,7 @@ def main():
         args=training_args,
         train_dataset=tokenized["train"],
         eval_dataset=tokenized[eval_split],
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
         data_collator=data_collator,
         compute_metrics=compute_metrics,
     )
