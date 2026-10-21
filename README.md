@@ -70,6 +70,28 @@ A short end-to-end smoke test was run in Google Colab on an NVIDIA Tesla T4 usin
 
 The four-example validation result is too small to estimate generalization performance. Treat this as pipeline verification only; run a full training and a separate final test-set evaluation before reporting model-quality results. The smoke test used temporary local test settings and did not change the repository's default training duration.
 
+## Repeatable fresh GPU smoke test
+
+After checking out the branch containing the smoke-test controls, run this on a CUDA-enabled GPU runtime. It caps the data and training steps for pipeline verification only:
+
+```bash
+python train.py \
+  --output_dir ./qlora_smoke_test_out \
+  --max_train_samples 8 \
+  --max_validation_samples 4 \
+  --max_test_samples 4 \
+  --max_steps 2 \
+  --eval_steps 1 \
+  --save_steps 1 \
+  --logging_steps 1 \
+  --per_device_train_batch_size 2 \
+  --per_device_eval_batch_size 2 \
+  --max_length 128 \
+  --report_to none
+```
+
+The script creates the validation split before applying sample caps, leaves the held-out test split separate, evaluates on validation during training, then evaluates the capped test split after training. Confirm the log shows the training/validation/test counts, two training steps, final test metrics, and the adapter/tokenizer save message. The small capped sample is not suitable for measuring model quality.
+
 ## Evaluation and outputs
 
 The script reports parameter counts and validation metrics returned by the Trainer. If the dataset does not provide a `validation` split, the script creates one by splitting 10% from `train` with the configured seed. This is used for training-time evaluation and best-checkpoint selection; an existing `test` split is not used for either purpose. After training, the selected model is evaluated on `test` once for final reporting, if that split exists. If the dataset has no separate `test` split, the script reports that final test evaluation was skipped. The script saves the PEFT adapter and tokenizer under the selected output directory.
