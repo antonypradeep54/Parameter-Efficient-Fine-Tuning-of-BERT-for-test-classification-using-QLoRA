@@ -99,15 +99,6 @@ def main():
             f"Dataset must contain a 'train' split. Available splits: {list(dataset.keys())}"
         )
 
-    # Use validation for model selection; keep the test split for final reporting.
-    eval_split = "validation" if "validation" in dataset else (
-        "test" if "test" in dataset else None
-    )
-    if eval_split is None:
-        raise ValueError(
-            "Dataset must contain a 'test' or 'validation' split for evaluation."
-        )
-
     candidate_text_columns = ["text", "review", "sentence", "content"]
     candidate_label_columns = ["label", "labels", "sentiment", "target"]
     train_columns = dataset["train"].column_names
@@ -124,8 +115,33 @@ def main():
             f"Found columns: {train_columns}"
         )
 
+    # Always select checkpoints using validation data, never the test set.
+    # If validation is absent, split it from train and leave any original test
+    # split untouched for one final evaluation after model selection.
+    if "validation" not in dataset:
+        if len(dataset["train"]) < 2:
+            raise ValueError(
+                "At least two training examples are required to create a "
+                "validation split when the dataset has no 'validation' split."
+            )
+        print(
+            "No validation split found. Creating a 10% validation split from "
+            "the training data; any existing test split will remain untouched."
+        )
+        split_dataset = dataset["train"].train_test_split(
+            test_size=0.1,
+            seed=args.seed,
+        )
+        dataset["train"] = split_dataset["train"]
+        dataset["validation"] = split_dataset["test"]
+
+    eval_split = "validation"
     print(f"Using text column: '{text_column}', label column: '{label_column}'")
     print(f"Using evaluation split: '{eval_split}'")
+    print(f"Training examples: {len(dataset['train']):,}")
+    print(f"Validation examples: {len(dataset['validation']):,}")
+    if "test" in dataset:
+        print(f"Held-out test examples: {len(dataset['test']):,}")
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_name, use_fast=True)
 
