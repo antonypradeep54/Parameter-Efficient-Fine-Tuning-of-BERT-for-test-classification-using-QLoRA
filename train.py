@@ -47,6 +47,10 @@ def parse_args():
     parser.add_argument("--save_steps", type=int, default=200)
     parser.add_argument("--max_length", type=int, default=256)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--max_train_samples", type=int, default=0, help="Optional cap for smoke tests; 0 uses all training examples.")
+    parser.add_argument("--max_validation_samples", type=int, default=0, help="Optional cap for smoke tests; 0 uses all validation examples.")
+    parser.add_argument("--max_test_samples", type=int, default=0, help="Optional cap for smoke tests; 0 uses all held-out test examples.")
+    parser.add_argument("--max_steps", type=int, default=-1, help="Optional Trainer step limit; -1 uses the configured number of epochs.")
     parser.add_argument(
         "--report_to",
         type=str,
@@ -135,6 +139,16 @@ def main():
         dataset["train"] = split_dataset["train"]
         dataset["validation"] = split_dataset["test"]
 
+    # Optional deterministic dataset caps keep smoke tests fast without changing defaults.
+    for split_name, limit in (
+        ("train", args.max_train_samples),
+        ("validation", args.max_validation_samples),
+        ("test", args.max_test_samples),
+    ):
+        if limit > 0 and split_name in dataset and len(dataset[split_name]) > limit:
+            dataset[split_name] = dataset[split_name].select(range(limit))
+            print(f"Smoke-test cap: {split_name}={len(dataset[split_name])} examples")
+
     eval_split = "validation"
     print(f"Using text column: '{text_column}', label column: '{label_column}'")
     print(f"Using evaluation split: '{eval_split}'")
@@ -213,6 +227,7 @@ def main():
         save_steps=args.save_steps,
         logging_steps=args.logging_steps,
         num_train_epochs=args.num_train_epochs,
+        max_steps=args.max_steps,
         learning_rate=args.learning_rate,
         fp16=not use_bf16,
         bf16=use_bf16,
