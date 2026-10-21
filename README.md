@@ -11,14 +11,15 @@ This repository explores parameter-efficient fine-tuning for binary sentiment cl
 
 ## Approach
 
-1. Load a dataset with a `train` split and a `test` or `validation` split.
-2. Infer the text and label columns from common names.
-3. Tokenize text using the selected Hugging Face tokenizer.
-4. Load the sequence-classification model with bitsandbytes 4-bit NF4 quantization and double quantization.
-5. Prepare the quantized model for k-bit training.
-6. Add LoRA adapters to the BERT attention query and value projections. The classifier head is included in `modules_to_save` for task-specific training.
-7. Use the validation split for training-time evaluation and best-checkpoint selection when available.
-8. After training, evaluate the selected model once on the separate held-out test split, if one exists, then save the adapter and tokenizer.
+1. Load a dataset with a `train` split.
+2. If the dataset has no `validation` split, create a reproducible 10% validation split from `train` using the configured seed. Any existing `test` split remains untouched.
+3. Infer the text and label columns from common names.
+4. Tokenize text using the selected Hugging Face tokenizer.
+5. Load the sequence-classification model with bitsandbytes 4-bit NF4 quantization and double quantization.
+6. Prepare the quantized model for k-bit training.
+7. Add LoRA adapters to the BERT attention query and value projections. The classifier head is included in `modules_to_save` for task-specific training.
+8. Use only the validation split for training-time evaluation and best-checkpoint selection.
+9. After training and checkpoint selection are complete, evaluate the selected model once on the separate held-out test split, if one exists, then save the adapter and tokenizer.
 
 QLoRA combines a quantized base model with trainable low-rank adapters. LoRA without quantization is a related but different setup; a configuration object alone does not make a run QLoRA.
 
@@ -71,7 +72,7 @@ The four-example validation result is too small to estimate generalization perfo
 
 ## Evaluation and outputs
 
-The script reports parameter counts and validation/evaluation metrics returned by the Trainer. When both `validation` and `test` splits exist, it uses `validation` for training-time evaluation and best-checkpoint selection, then reports a separate `Final test results` metric set on `test`. Test metrics are for final reporting, not model selection. If no validation split exists and `test` is used during training-time evaluation, the script warns that this is not an independent final test. The script saves the PEFT adapter and tokenizer under the selected output directory.
+The script reports parameter counts and validation metrics returned by the Trainer. If the dataset does not provide a `validation` split, the script creates one by splitting 10% from `train` with the configured seed. This is used for training-time evaluation and best-checkpoint selection; an existing `test` split is not used for either purpose. After training, the selected model is evaluated on `test` once for final reporting, if that split exists. If the dataset has no separate `test` split, the script reports that final test evaluation was skipped. The script saves the PEFT adapter and tokenizer under the selected output directory.
 
 Record actual run details before publishing results, including the GPU model, CUDA/PyTorch versions, model and dataset revision, batch size, training duration, evaluation metrics, and any observed memory usage. Do not treat a configured run as evidence of measured performance.
 
